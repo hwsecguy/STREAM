@@ -185,8 +185,7 @@ static STREAM_TYPE c[STREAM_ARRAY_SIZE + OFFSET];
 static double avgtime[4] = {0}, maxtime[4] = {0},
               mintime[4] = {FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX};
 
-static char *label[4] = {
-    "Copy:      ", "Scale:     ", "Add:       ", "Triad:     "};
+static char *label[4] = {"Copy", "Scale", "Add", "Triad"};
 
 static double bytes[4] = {2 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE,
                           2 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE,
@@ -352,8 +351,15 @@ int main() {
 
   /*	--- SUMMARY --- */
 
+  // print out detailed times
+  printf("Detailed time measurements (first iteration skipped):\n");
+  printf("Iteration  %8s  %8s  %8s  %8s\n", label[0], label[1], label[2],
+         label[3]);
+
   for (k = 1; k < NTIMES; k++) /* note -- skip first iteration */
   {
+    printf("%-9d  %8.6f  %8.6f  %8.6f  %8.6f\n", k, times[0][k], times[1][k],
+           times[2][k], times[3][k]);
     for (j = 0; j < 4; j++) {
       avgtime[j] = avgtime[j] + times[j][k];
       mintime[j] = MIN(mintime[j], times[j][k]);
@@ -361,12 +367,13 @@ int main() {
     }
   }
 
-  printf("Function    Avg Rate MB/s  Avg time     Best Rate MB/s  Min time     "
-         "Worst Rate MB/s  Max time\n");
+  printf(HLINE);
+  printf("Function   Avg Rate MB/s  Avg time s   Best Rate  Min time   "
+         "Worst Rate  Max time\n");
   for (j = 0; j < 4; j++) {
     avgtime[j] = avgtime[j] / (double)(NTIMES - 1);
 
-    printf("%s%12.1f  %11.6f  %12.1f  %11.6f  %12.1f  %11.6f\n", label[j],
+    printf("%-11s%13.1f  %10.6f  %10.1f  %8.6f  %11.1f  %8.6f\n", label[j],
            1.0E-06 * bytes[j] / avgtime[j], avgtime[j],
            1.0E-06 * bytes[j] / mintime[j], mintime[j],
            1.0E-06 * bytes[j] / maxtime[j], maxtime[j]);
