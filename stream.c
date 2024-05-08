@@ -352,15 +352,17 @@ int main() {
   /*	--- SUMMARY --- */
 
   // print out detailed times
-  printf("Detailed time measurements (first iteration skipped):\n");
-  printf("Iteration  %8s  %8s  %8s  %8s\n", label[0], label[1], label[2],
+  printf("Detailed time measurements:\n");
+  printf("Iteration  %9s  %9s  %9s  %9s\n", label[0], label[1], label[2],
          label[3]);
 
-  for (k = 1; k < NTIMES; k++) /* note -- skip first iteration */
-  {
-    printf("%-9d  %8.6f  %8.6f  %8.6f  %8.6f\n", k, times[0][k], times[1][k],
+  for (k = 0; k < NTIMES; k++) {
+    printf("%-9d  %9.6f  %9.6f  %9.6f  %9.6f\n", k, times[0][k], times[1][k],
            times[2][k], times[3][k]);
     for (j = 0; j < 4; j++) {
+      /* note -- skip first iteration */
+      if (k == 0)
+        continue;
       avgtime[j] = avgtime[j] + times[j][k];
       mintime[j] = MIN(mintime[j], times[j][k]);
       maxtime[j] = MAX(maxtime[j], times[j][k]);
@@ -368,12 +370,13 @@ int main() {
   }
 
   printf(HLINE);
-  printf("Function   Avg Rate MB/s  Avg time s   Best Rate  Min time   "
-         "Worst Rate  Max time\n");
+  printf("Result summary (first iteration skipped):\n");
+  printf("Function   Avg Rate   Avg time   Best Rate   Min time   "
+         "Worst Rate   Max time\n");
   for (j = 0; j < 4; j++) {
     avgtime[j] = avgtime[j] / (double)(NTIMES - 1);
 
-    printf("%-11s%13.1f  %10.6f  %10.1f  %8.6f  %11.1f  %8.6f\n", label[j],
+    printf("%-9s%10.1f  %9.6f  %10.1f  %9.6f  %11.1f  %9.6f\n", label[j],
            1.0E-06 * bytes[j] / avgtime[j], avgtime[j],
            1.0E-06 * bytes[j] / mintime[j], mintime[j],
            1.0E-06 * bytes[j] / maxtime[j], maxtime[j]);
