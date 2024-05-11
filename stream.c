@@ -288,16 +288,9 @@ int main() {
   printf("Number of Threads counted = %i\n", k);
 #endif
 
-  /* Get initial value for system clock. */
-#pragma omp parallel for
-  for (j = 0; j < STREAM_ARRAY_SIZE; j++) {
-    a[j] = 1.0;
-    b[j] = 2.0;
-    c[j] = 0.0;
-  }
-
   printf(HLINE);
 
+  /* Get initial value for system clock. */
   if ((quantum = checktick()) >= 1)
     printf("Your clock granularity/precision appears to be "
            "%d microseconds.\n",
@@ -307,6 +300,23 @@ int main() {
            "less than one microsecond.\n");
     quantum = 1;
   }
+
+  printf(HLINE);
+
+  /* Fill the array to allocate memory */
+  printf("Filling working arrays...\n");
+  t = mysecond();
+#pragma omp parallel for
+  for (j = 0; j < STREAM_ARRAY_SIZE; j++) {
+    a[j] = 1.0;
+    b[j] = 2.0;
+    c[j] = 0.0;
+  }
+  t = 1.0E6 * (mysecond() - t);
+  printf("Done filling working arrays, took %d milliseconds (%d seconds)\n",
+         (int)(t / 1.0E3), (int)(t / 1.0E6));
+
+  printf(HLINE);
 
   t = mysecond();
 #pragma omp parallel for
