@@ -43,6 +43,7 @@
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -104,12 +105,12 @@
  *         code using, for example, "-DNTIMES=7".
  */
 #ifdef NTIMES
-#if NTIMES <= 1
-#define NTIMES 10
+#if NTIMES < 16
+#define NTIMES 16
 #endif
 #endif
 #ifndef NTIMES
-#define NTIMES 10
+#define NTIMES 256
 #endif
 
 /*  Users are allowed to modify the "OFFSET" variable, which *may* change the
@@ -165,6 +166,13 @@
  *
  *-----------------------------------------------------------------------*/
 
+/*
+ * 4) Trim the results by TRIM_PERCENT percent
+ */
+#ifndef TRIM_PERCENT
+#define TRIM_PERCENT 0.25
+#endif
+
 #define HLINE "-------------------------------------------------------------\n"
 
 #ifndef MIN
@@ -184,6 +192,7 @@ static STREAM_TYPE c[STREAM_ARRAY_SIZE + OFFSET];
 
 static double avgtime[4] = {0}, maxtime[4] = {0},
               mintime[4] = {FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX};
+static double firstitertime[4] = {0}, trimavgtime[4] = {0}, mediantime[4] = {0};
 
 static char *label[4] = {"Copy", "Scale", "Add", "Triad"};
 
@@ -203,6 +212,19 @@ extern void tuned_STREAM_Triad(STREAM_TYPE scalar);
 #ifdef _OPENMP
 extern int omp_get_num_threads();
 #endif
+
+// comparator function for qsort()
+int cmp_double(const void *lhs, const void *rhs) {
+  double lhs_value = *(double *)lhs;
+  double rhs_value = *(double *)rhs;
+  if (lhs_value < rhs_value)
+    return -1;
+  else if (lhs_value > rhs_value)
+    return 1;
+  else
+    return 0;
+}
+
 int main() {
   int quantum, checktick();
   int BytesPerWord;
@@ -210,6 +232,7 @@ int main() {
   ssize_t j;
   STREAM_TYPE scalar;
   double t, times[4][NTIMES];
+  size_t num_trimmed_time = floor(NTIMES * TRIM_PERCENT);
 
   /* --- SETUP --- determine precision and check timing --- */
 
@@ -241,8 +264,9 @@ int main() {
          (3.0 * BytesPerWord) *
              ((double)STREAM_ARRAY_SIZE / 1024.0 / 1024. / 1024.));
   printf("Each kernel will be executed %d times.\n", NTIMES);
-  printf(" The *best* time for each kernel (excluding the first iteration)\n");
-  printf(" will be used to compute the reported bandwidth.\n");
+  printf("For trimmed average time, top and bottom each %lu times will be "
+         "discarded.\n",
+         num_trimmed_time);
 
 #ifdef _OPENMP
   printf(HLINE);
@@ -371,8 +395,8 @@ int main() {
 
   printf(HLINE);
   printf("Result summary (first iteration skipped):\n");
-  printf("Function   Avg Rate   Avg time   Best Rate   Min time   "
-         "Worst Rate   Max time\n");
+  printf("Function   Avg Rate   Avg Time   Best Rate   Min Time   "
+         "Worst Rate   Max Time\n");
   for (j = 0; j < 4; j++) {
     avgtime[j] = avgtime[j] / (double)(NTIMES - 1);
 
@@ -381,6 +405,36 @@ int main() {
            1.0E-06 * bytes[j] / mintime[j], mintime[j],
            1.0E-06 * bytes[j] / maxtime[j], maxtime[j]);
   }
+
+  // save first iteration time and sort each time array
+  for (j = 0; j < 4; j++) {
+    firstitertime[j] = times[j][0];
+    qsort(times[j], NTIMES, sizeof(double), cmp_double);
+  }
+  // calculate trimmed results and median
+  for (j = 0; j < 4; j++) {
+    for (k = num_trimmed_time; k < NTIMES - num_trimmed_time; k++)
+      trimavgtime[j] = trimavgtime[j] + times[j][k];
+    trimavgtime[j] = trimavgtime[j] / (NTIMES - 2 * num_trimmed_time);
+
+    if (NTIMES % 2 == 0)
+      mediantime[j] = (times[j][NTIMES / 2 - 1] + times[j][NTIMES / 2]) / 2;
+    else
+      mediantime[j] = times[j][NTIMES / 2];
+  }
+  printf(HLINE);
+  printf("Result summary (continued):\n");
+  printf("Function  0th-it. Rate      Time   Tri. Avg. Rate      "
+         "Time   Median Rate      Time\n");
+  for (j = 0; j < 4; j++) {
+    avgtime[j] = avgtime[j] / (double)(NTIMES - 1);
+
+    printf("%-9s%13.1f  %6.6f  %15.1f  %6.6f  %12.1f  %8.6f\n", label[j],
+           1.0E-06 * bytes[j] / firstitertime[j], firstitertime[j],
+           1.0E-06 * bytes[j] / trimavgtime[j], trimavgtime[j],
+           1.0E-06 * bytes[j] / mediantime[j], mediantime[j]);
+  }
+
   printf(HLINE);
 
   /* --- Check Results --- */
