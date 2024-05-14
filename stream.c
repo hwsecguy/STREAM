@@ -202,6 +202,8 @@ static double bytes[4] = {2 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE,
                           3 * sizeof(STREAM_TYPE) * STREAM_ARRAY_SIZE};
 
 extern double mysecond();
+extern void mysecond_des();
+
 extern void checkSTREAMresults();
 #ifdef TUNED
 extern void tuned_STREAM_Copy();
@@ -238,6 +240,9 @@ int main() {
 
   printf(HLINE);
   printf("STREAM version $Revision: 5.10 $\n");
+  printf("This STREAM binary is compiled with timer with following description:\n");
+  mysecond_des();
+
   printf(HLINE);
   BytesPerWord = sizeof(STREAM_TYPE);
   printf("This system uses %d bytes per array element.\n", BytesPerWord);
@@ -482,20 +487,6 @@ int checktick() {
   }
 
   return (minDelta);
-}
-
-/* A gettimeofday routine to give access to the wall
-   clock timer on most UNIX-like systems.  */
-
-#include <sys/time.h>
-
-double mysecond() {
-  struct timeval tp;
-  struct timezone tzp;
-  int i;
-
-  i = gettimeofday(&tp, &tzp);
-  return ((double)tp.tv_sec + (double)tp.tv_usec * 1.e-6);
 }
 
 #ifndef abs
